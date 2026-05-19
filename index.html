@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberDuel 2026 - 極致流星粒子完全體</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #04060f;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace, 'Segoe UI';
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            background-image: radial-gradient(circle at center, #0c102b 0%, #04060f 100%);
+        }
+
+        #hud {
+            display: flex;
+            justify-content: space-between;
+            width: 1300px;
+            margin-bottom: 15px;
+            padding: 15px 35px;
+            background: linear-gradient(180deg, rgba(16, 22, 48, 0.9) 0%, rgba(8, 11, 26, 0.95) 100%);
+            border-left: 4px solid #00f0ff;
+            border-right: 4px solid #ff007f;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(0, 240, 255, 0.1);
+            position: relative;
+            clip-path: polygon(0 0, 100% 0, 98% 100%, 2% 100%);
+            box-sizing: border-box;
+        }
+
+        .player-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .panel-p1 { align-items: flex-start; }
+        .panel-p2 { align-items: flex-end; }
+
+        .player-label {
+            font-size: 0.85rem;
+            font-weight: bold;
+            letter-spacing: 3px;
+            text-shadow: 0 0 10px currentColor;
+        }
+        .label-p1 { color: #00f0ff; }
+        .label-p2 { color: #ff007f; }
+
+        .hp-bar-bg {
+            width: 260px;
+            height: 16px;
+            background-color: #090d1a;
+            border: 1px solid #1a254c;
+            padding: 2px;
+            box-sizing: border-box;
+            display: flex;
+            gap: 3px;
+        }
+
+        .hp-grid {
+            height: 100%;
+            flex: 1;
+            background-color: #111424;
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+        .p1-hp-active { background-color: #00f0ff; box-shadow: 0 0 8px #00f0ff; }
+        .p2-hp-active { background-color: #ff007f; box-shadow: 0 0 8px #ff007f; }
+
+        .buff-status {
+            font-size: 0.75rem;
+            height: 15px;
+            font-weight: bold;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            animation: textPulse 1s infinite alternate;
+        }
+
+        @keyframes textPulse {
+            0% { opacity: 0.6; }
+            100% { opacity: 1; text-shadow: 0 0 8px currentColor; }
+        }
+
+        #zone-warning {
+            font-weight: bold;
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+            align-self: center;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        canvas {
+            background-color: #050711;
+            border: 2px solid #141938;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 240, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        #controls-guide {
+            margin-top: 12px;
+            display: flex;
+            justify-content: space-between;
+            width: 1300px;
+            font-size: 0.8rem;
+            color: #48547a;
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+
+        #gameover-overlay {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(3, 4, 10, 0.95);
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            backdrop-filter: blur(8px);
+        }
+
+        #winner-text {
+            font-size: 4rem;
+            font-weight: bold;
+            margin-bottom: 35px;
+            letter-spacing: 6px;
+            text-shadow: 0 0 20px currentColor;
+        }
+
+        button {
+            padding: 15px 45px;
+            font-size: 1.1rem;
+            font-family: inherit;
+            background: transparent;
+            color: #fff;
+            border: 2px solid #00f0ff;
+            cursor: pointer;
+            font-weight: bold;
+            letter-spacing: 3px;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+            transition: all 0.2s ease;
+        }
+        button:hover {
+            background-color: #00f0ff;
+            color: #000;
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.7);
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="hud">
+        <div class="player-panel panel-p1">
+            <div class="player-label label-p1">🔷 SYSTEM // STRIKER_01</div>
+            <div class="hp-bar-bg" id="p1-hp-bar">
+                <div class="hp-grid p1-hp-active"></div>
+                <div class="hp-grid p1-hp-active"></div>
+                <div class="hp-grid p1-hp-active"></div>
+                <div class="hp-grid p1-hp-active"></div>
+                <div class="hp-grid p1-hp-active"></div>
+            </div>
+            <div id="p1-buff" class="buff-status" style="color: #00f0ff;"></div>
+        </div>
+        <div id="zone-warning">CORE_STATUS // ONLINE</div>
+        <div class="player-panel panel-p2">
+            <div class="player-label label-p2">STRIKER_02 // CRIMSON 🔶</div>
+            <div class="hp-bar-bg" id="p2-hp-bar">
+                <div class="hp-grid p2-hp-active"></div>
+                <div class="hp-grid p2-hp-active"></div>
+                <div class="hp-grid p2-hp-active"></div>
+                <div class="hp-grid p2-hp-active"></div>
+                <div class="hp-grid p2-hp-active"></div>
+            </div>
+            <div id="p2-buff" class="buff-status" style="color: #ff007f;"></div>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas" width="1300" height="750"></canvas>
+
+    <div id="controls-guide">
+        <div style="color: #00f0ff;">[W][A][S][D] MANEUVER // [SPACE] PLASMA_BOLT</div>
+        <div style="color: #ff007f;">[▲][▼][◀][▶] MANEUVER // [ENTER] PLASMA_BOLT</div>
+    </div>
+
+    <div id="gameover-overlay">
+        <div id="winner-text">SYSTEM REBOOT</div>
+        <button onclick="resetGame()">RESTART_MATCH</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const overlay = document.getElementById('gameover-overlay');
+        const winnerText = document.getElementById('winner-text');
+        const p1BuffText = document.getElementById('p1-buff');
+        const p2BuffText = document.getElementById('p2-buff');
+        const zoneWarningText = document.getElementById('zone-warning');
+        
+        const p1HpGrids = document.getElementById('p1-hp-bar').children;
+        const p2HpGrids = document.getElementById('p2-hp-bar').children;
+
+        let gameActive = true;
+        let particles = [];
+        let bgParticles = [];
+        let bullets = [];
+        
+        let screenShakeLeft = 0;
+        let itemBox = null;
+        let nextItemTime = Date.now() + 4000;
+
+        let meteors = [];
+        let nextMeteorTime = Date.now() + 3000;
+
+        let currentStage = 1;     
+        let zoneState = "STABLE"; 
+        let stageTimer = Date.now() + 15000; 
+        
+        // 🛑 新增：力場數位代碼粒子系統
+        let vortexParticles = [];
+        let zoneParticleOffset = 0;
+        
+        for(let i=0; i<120; i++) {
+            vortexParticles.push({
+                pos: Math.random(), // 0.0 ~ 1.0 代表在邊框圓周上的位置
+                char: Math.random() > 0.5 ? '0' : '1'
+            });
+        }
+
+        let zone = { left: 0, right: canvas.width, top: 0, bottom: canvas.height };
+        let targetZone = { left: 0, right: canvas.width, top: 0, bottom: canvas.height };
+
+        const stageConfigs = {
+            1: { w: 950, h: 550, shrinkDuration: 12000, waitNext: 15000 },
+            2: { w: 600, h: 350, shrinkDuration: 12000, waitNext: 15000 },
+            3: { w: 280, h: 180, shrinkDuration: 12000, waitNext: 999999 }
+        };
+
+        const p1 = {
+            id: 1, x: 200, y: 375, r: 18, speed: 4.8, baseSpeed: 4.8, color: '#00f0ff',
+            hp: 5, maxHp: 5, lastShot: 0, cooldown: 200,
+            dirX: 1, dirY: 0, isMoving: false, muzzleFlash: 0,
+            trail: [], shield: false, lastHurtByZone: 0,
+            burstUntil: 0, plasmaUntil: 0, hasteUntil: 0
+        };
+
+        const p2 = {
+            id: 2, x: 1100, y: 375, r: 18, speed: 4.8, baseSpeed: 4.8, color: '#ff007f',
+            hp: 5, maxHp: 5, lastShot: 0, cooldown: 200,
+            dirX: -1, dirY: 0, isMoving: false, muzzleFlash: 0,
+            trail: [], shield: false, lastHurtByZone: 0,
+            burstUntil: 0, plasmaUntil: 0, hasteUntil: 0
+        };
+
+        const bulletSpeed = 10;
+        const keys = {};
+
+        window.addEventListener('keydown', e => { 
+            keys[e.code] = true; 
+            if (['Space', 'Enter', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
+        });
+        window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+        // 初始化背景：加入流星判定
+        for(let i=0; i<60; i++) {
+            bgParticles.push({
+                x: Math.random() * canvas.width, 
+                y: Math.random() * canvas.height,
+                size: Math.random() * 2 + 0.5, 
+                baseSpeed: Math.random() * 0.3 + 0.1,
+                isShootingStar: false,
+                speedX: 0, speedY: 0
+            });
+        }
+
+        function createExplosion(x, y, color, count = 12) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 4 + 1;
+                particles.push({
+                    x: x, y: y,
+                    vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+                    radius: Math.random() * 3 + 1, color: color, alpha: 1,
+                    decay: Math.random() * 0.03 + 0.015
+                });
+            }
+        }
+
+        function triggerScreenShake(intensity) {
+            screenShakeLeft = intensity;
+        }
+
+        function spawnItemBox() {
+            const padding = 60;
+            const widthScope = (zone.right - padding) - (zone.left + padding);
+            const heightScope = (zone.bottom - padding) - (zone.top + padding);
+
+            if (widthScope <= 40 || heightScope <= 40) return;
+
+            itemBox = {
+                x: Math.random() * widthScope + (zone.left + padding),
+                y: Math.random() * heightScope + (zone.top + padding),
+                size: 24, pulse: 0
+            };
+            createExplosion(itemBox.x, itemBox.y, '#ffff00', 10);
+        }
+
+        function activateItem(player) {
+            if (!itemBox) return;
+            createExplosion(itemBox.x, itemBox.y, '#ffff00', 25);
+            
+            const now = Date.now();
+            const items = ['REPAIR', 'SHIELD', 'BURST', 'PLASMA', 'HASTE'];
+            const chosenItem = items[Math.floor(Math.random() * items.length)];
+
+            if (chosenItem === 'REPAIR') {
+                if (player.hp < player.maxHp) player.hp++;
+                createExplosion(player.x, player.y, '#00ff00', 15);
+            } else if (chosenItem === 'SHIELD') {
+                player.shield = true;
+            } else if (chosenItem === 'BURST') {
+                player.burstUntil = now + 5000;    
+            } else if (chosenItem === 'PLASMA') {
+                player.plasmaUntil = now + 5000;   
+            } else if (chosenItem === 'HASTE') {
+                player.hasteUntil = now + 4000;    
+            }
+
+            itemBox = null;
+            nextItemTime = Date.now() + Math.random() * 4000 + 6000;
+        }
+
+        function spawnMeteorSystem() {
+            const now = Date.now();
+            meteors.push({
+                targetX: Math.random() * (canvas.width - 100) + 50,
+                targetY: Math.random() * (canvas.height - 100) + 50,
+                radius: 45,             
+                warnDuration: 1200,     
+                spawnTime: now,
+                landed: false,
+                currentY: -50,          
+                speedY: 0
+            });
+            nextMeteorTime = now + Math.random() * 3000 + 3000; 
+        }
+
+        function spawnBullet(player, opponent) {
+            const now = Date.now();
+            if (now - player.lastShot < player.cooldown) return;
+
+            let dx = player.dirX; let dy = player.dirY;
+            if (dx === 0 && dy === 0) {
+                const angle = Math.atan2(opponent.y - player.y, opponent.x - player.x);
+                dx = Math.cos(angle); dy = Math.sin(angle);
+            }
+
+            const isPlasma = now < player.plasmaUntil;
+            const isBurst = now < player.burstUntil;
+
+            // 給子彈加上 dead 屬性，避免 Array.splice 卡死
+            if (isBurst) {
+                const perpX = -dy * 12;
+                const perpY = dx * 12;
+                bullets.push({
+                    x: player.x + dx * player.r + perpX, y: player.y + dy * player.r + perpY,
+                    vx: dx * bulletSpeed, vy: dy * bulletSpeed, color: player.color, owner: player, plasma: isPlasma, dead: false
+                });
+                bullets.push({
+                    x: player.x + dx * player.r - perpX, y: player.y + dy * player.r - perpY,
+                    vx: dx * bulletSpeed, vy: dy * bulletSpeed, color: player.color, owner: player, plasma: isPlasma, dead: false
+                });
+            } else {
+                bullets.push({
+                    x: player.x + dx * player.r, y: player.y + dy * player.r,
+                    vx: dx * bulletSpeed, vy: dy * bulletSpeed, color: player.color, owner: player, plasma: isPlasma, dead: false
+                });
+            }
+
+            player.muzzleFlash = 4;
+            player.lastShot = now;
+        }
+
+        function updatePlayer(p, moveX, moveY, fireKey, opponent) {
+            const now = Date.now();
+            p.speed = now < p.hasteUntil ? p.baseSpeed * 1.4 : p.baseSpeed;
+
+            if (moveX !== 0 || moveY !== 0) {
+                p.isMoving = true;
+                const length = Math.hypot(moveX, moveY);
+                p.dirX = moveX / length; p.dirY = moveY / length;
+                p.x += p.dirX * p.speed; p.y += p.dirY * p.speed;
+
+                p.trail.push({ x: p.x, y: p.y, alpha: 0.35 });
+                if (p.trail.length > 7) p.trail.shift();
+            } else {
+                p.isMoving = false;
+                if (p.trail.length > 0) p.trail.shift();
+            }
+
+            if (keys[fireKey]) spawnBullet(p, opponent);
+
+            if (itemBox && Math.hypot(p.x - itemBox.x, p.y - itemBox.y) < p.r + itemBox.size / 2) {
+                activateItem(p);
+            }
+            if (p.muzzleFlash > 0) p.muzzleFlash--;
+        }
+
+        function updateZoneSystem() {
+            const now = Date.now();
+            const config = stageConfigs[currentStage];
+            
+            // 力場粒子流動速度
+            zoneParticleOffset += 0.003; 
+            if(zoneParticleOffset > 1.0) zoneParticleOffset -= 1.0;
+
+            if (zoneState === "STABLE") {
+                const timeLeft = Math.max(0, Math.ceil((stageTimer - now) / 1000));
+                zoneWarningText.innerText = `STAGE 0${currentStage} // COLLAPSE IN ${timeLeft}s`;
+                zoneWarningText.style.color = '#ffaa00';
+                zoneWarningText.style.textShadow = '0 0 10px #ffaa00';
+
+                if (now >= stageTimer) {
+                    zoneState = "SHRINKING";
+                    targetZone.left = (canvas.width - config.w) / 2;
+                    targetZone.right = canvas.width - targetZone.left;
+                    targetZone.top = (canvas.height - config.h) / 2;
+                    targetZone.bottom = canvas.height - targetZone.top;
+                    stageTimer = now + config.shrinkDuration;
+                }
+            } 
+            else if (zoneState === "SHRINKING") {
+                zoneWarningText.innerText = `⚠️ STAGE 0${currentStage} COLLAPSING ⚠️`;
+                zoneWarningText.style.color = '#ff0033';
+                zoneWarningText.style.textShadow = '0 0 12px #ff0033';
+
+                const totalStepX = 0.45; 
+                const totalStepY = totalStepX * (canvas.height / canvas.width);
+
+                if (zone.left < targetZone.left) zone.left += totalStepX;
+                if (zone.right > targetZone.right) zone.right -= totalStepX;
+                if (zone.top < targetZone.top) zone.top += totalStepY;
+                if (zone.bottom > targetZone.bottom) zone.bottom -= totalStepY;
+
+                if (now >= stageTimer || (zone.left >= targetZone.left && zone.right <= targetZone.right)) {
+                    zone = { ...targetZone };
+                    if (currentStage < 3) {
+                        currentStage++;
+                        zoneState = "STABLE";
+                        stageTimer = now + stageConfigs[currentStage].waitNext;
+                    } else {
+                        zoneState = "FINAL_DEADZONE";
+                    }
+                }
+            } else {
+                zoneWarningText.innerText = `🚨 FINAL DEATH MATCH ZONE 🚨`;
+                zoneWarningText.style.color = '#ff0000';
+                zoneWarningText.style.textShadow = '0 0 15px #ff0000';
+            }
+
+            [p1, p2].forEach(p => {
+                const isOutside = (p.x < zone.left || p.x > zone.right || p.y < zone.top || p.y > zone.bottom);
+                if (isOutside) {
+                    if (now - p.lastHurtByZone > 800) {
+                        p.hp--;
+                        p.lastHurtByZone = now;
+                        triggerScreenShake(12);
+                        createExplosion(p.x, p.y, '#ff0033', 8); 
+                        checkGameOver();
+                    }
+                }
+            });
+        }
+
+        function updateHpBars() {
+            for (let i = 0; i < 5; i++) {
+                p1HpGrids[i].className = i < p1.hp ? "hp-grid p1-hp-active" : "hp-grid";
+                p2HpGrids[i].className = i < p2.hp ? "hp-grid p2-hp-active" : "hp-grid";
+            }
+        }
+
+        function update() {
+            if (!gameActive) return;
+
+            const now = Date.now();
+            updateZoneSystem();
+
+            let p1X = 0; let p1Y = 0;
+            if (keys['KeyW']) p1Y = -1; if (keys['KeyS']) p1Y = 1;
+            if (keys['KeyA']) p1X = -1; if (keys['KeyD']) p1X = 1;
+            updatePlayer(p1, p1X, p1Y, 'Space', p2);
+
+            let p2X = 0; let p2Y = 0;
+            if (keys['ArrowUp']) p2Y = -1; if (keys['ArrowDown']) p2Y = 1;
+            if (keys['ArrowLeft']) p2X = -1; if (keys['ArrowRight']) p2X = 1;
+            updatePlayer(p2, p2X, p2Y, 'Enter', p1);
+
+            if (!itemBox && now > nextItemTime) { spawnItemBox(); }
+            if (now > nextMeteorTime) { spawnMeteorSystem(); }
+
+            // 隕石落下
+            for (let i = meteors.length - 1; i >= 0; i--) {
+                const m = meteors[i];
+                const elapsed = now - m.spawnTime;
+
+                if (!m.landed) {
+                    m.currentY = -50 + (m.targetY + 50) * (elapsed / m.warnDuration);
+                    if (elapsed >= m.warnDuration) {
+                        m.landed = true;
+                        m.currentY = m.targetY;
+                        triggerScreenShake(25); 
+                        createExplosion(m.targetX, m.targetY, '#ff5500', 30);
+                        createExplosion(m.targetX, m.targetY, '#ffcc00', 15);
+
+                        [p1, p2].forEach(p => {
+                            if (Math.hypot(p.x - m.targetX, p.y - m.targetY) < p.r + m.radius) {
+                                if (p.shield) {
+                                    p.shield = false;
+                                    createExplosion(p.x, p.y, '#ffffff', 10);
+                                } else {
+                                    p.hp--;
+                                    createExplosion(p.x, p.y, '#ff0033', 20);
+                                    checkGameOver();
+                                }
+                            }
+                        });
+                    }
+                } else {
+                    if (elapsed > m.warnDuration + 400) { meteors.splice(i, 1); }
+                }
+            }
+
+            [p1, p2].forEach(p => {
+                if (p.x < p.r) p.x = p.r; if (p.x > canvas.width - p.r) p.x = canvas.width - p.r;
+                if (p.y < p.r) p.y = p.r; if (p.y > canvas.height - p.r) p.y = canvas.height - p.r;
+            });
+
+            // 🛑 新增：流星與背景微粒演算
+            bgParticles.forEach(bp => {
+                // 有極小機率突變為劃破天際的流星
+                if (!bp.isShootingStar && Math.random() < 0.0015) {
+                    bp.isShootingStar = true;
+                    bp.speedX = (Math.random() > 0.5 ? 1 : -1) * (Math.random() * 8 + 6);
+                    bp.speedY = Math.random() * 8 + 6;
+                }
+                
+                if (bp.isShootingStar) {
+                    bp.x += bp.speedX;
+                    bp.y += bp.speedY;
+                    if (bp.x < 0 || bp.x > canvas.width || bp.y > canvas.height) {
+                        bp.isShootingStar = false;
+                        bp.y = 0;
+                        bp.x = Math.random() * canvas.width;
+                    }
+                } else {
+                    const isP1Haste = now < p1.hasteUntil && p1.isMoving;
+                    const isP2Haste = now < p2.hasteUntil && p2.isMoving;
+                    bp.y -= (isP1Haste || isP2Haste) ? bp.baseSpeed * 4 : bp.baseSpeed;
+                    if (bp.y < 0) { bp.y = canvas.height; bp.x = Math.random() * canvas.width; }
+                }
+            });
+
+            // 🛑 修復重點：子彈物理與碰撞完全重構 (不再使用中途 splice 導致卡死)
+            for (let i = 0; i < bullets.length; i++) {
+                if (bullets[i].dead) continue;
+                
+                bullets[i].x += bullets[i].vx; 
+                bullets[i].y += bullets[i].vy;
+
+                if (bullets[i].x < 0 || bullets[i].x > canvas.width || bullets[i].y < 0 || bullets[i].y > canvas.height) {
+                    bullets[i].dead = true;
+                    continue;
+                }
+
+                if (itemBox && Math.abs(bullets[i].x - itemBox.x) < itemBox.size/2 && Math.abs(bullets[i].y - itemBox.y) < itemBox.size/2) {
+                    activateItem(bullets[i].owner);
+                    bullets[i].dead = true;
+                    continue;
+                }
+
+                // 子彈互撞 (雙重迴圈安全寫法)
+                if (!bullets[i].plasma) {
+                    for (let j = i + 1; j < bullets.length; j++) {
+                        if (bullets[j].dead || bullets[j].plasma) continue;
+                        if (bullets[i].owner !== bullets[j].owner) {
+                            if (Math.hypot(bullets[i].x - bullets[j].x, bullets[i].y - bullets[j].y) < 10) {
+                                bullets[i].dead = true;
+                                bullets[j].dead = true;
+                                createExplosion(bullets[i].x, bullets[i].y, '#7f8c8d', 4);
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (bullets[i].dead) continue;
+
+                // 擦彈特效
+                [p1, p2].forEach(p => {
+                    if (bullets[i].owner !== p) {
+                        const dist = Math.hypot(bullets[i].x - p.x, bullets[i].y - p.y);
+                        if (dist > p.r && dist < p.r + 20 && Math.random() > 0.85) {
+                            particles.push({
+                                x: p.x + (Math.random()*12-6), y: p.y + (Math.random()*12-6),
+                                vx: bullets[i].vx * 0.2, vy: bullets[i].vy * 0.2,
+                                radius: Math.random() * 1.5 + 0.5, color: '#ffcc00', alpha: 0.8, decay: 0.04
+                            });
+                        }
+                    }
+                });
+
+                // 擊中 P1
+                if (bullets[i].owner !== p1 && Math.hypot(bullets[i].x - p1.x, bullets[i].y - p1.y) < p1.r + (bullets[i].plasma ? 8 : 0)) {
+                    bullets[i].dead = true;
+                    if (p1.shield) {
+                        p1.shield = false;
+                        createExplosion(p1.x, p1.y, '#ffffff', 15);
+                    } else {
+                        p1.hp--;
+                        triggerScreenShake(15);
+                        createExplosion(bullets[i].x, bullets[i].y, p1.color, 22);
+                        checkGameOver();
+                    }
+                    continue;
+                }
+
+                // 擊中 P2
+                if (bullets[i].owner !== p2 && Math.hypot(bullets[i].x - p2.x, bullets[i].y - p2.y) < p2.r + (bullets[i].plasma ? 8 : 0)) {
+                    bullets[i].dead = true;
+                    if (p2.shield) {
+                        p2.shield = false;
+                        createExplosion(p2.x, p2.y, '#ffffff', 15);
+                    } else {
+                        p2.hp--;
+                        triggerScreenShake(15);
+                        createExplosion(bullets[i].x, bullets[i].y, p2.color, 22);
+                        checkGameOver();
+                    }
+                    continue;
+                }
+            }
+            
+            // 安全清除已經死亡的子彈，永不卡死
+            bullets = bullets.filter(b => !b.dead);
+
+            // 粒子衰退
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx; p.y += p.vy; p.alpha -= p.decay;
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+
+            updateHpBars();
+            
+            p1BuffText.innerText = p1.shield ? "SYS: [SHIELD]" : (now < p1.burstUntil ? "🔥 TWIN_BURST" : (now < p1.plasmaUntil ? "⚡ PLASMA_CANNON" : (now < p1.hasteUntil ? "🚀 OVERDRIVE_SPEED" : "")));
+            p2BuffText.innerText = p2.shield ? "SYS: [SHIELD]" : (now < p2.burstUntil ? "🔥 TWIN_BURST" : (now < p2.plasmaUntil ? "⚡ PLASMA_CANNON" : (now < p2.hasteUntil ? "🚀 OVERDRIVE_SPEED" : "")));
+        }
+
+        function drawCyberStriker(p) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            const angle = Math.atan2(p.dirY, p.dirX);
+            ctx.rotate(angle);
+
+            ctx.shadowBlur = 15; 
+            ctx.shadowColor = p.color;
+            ctx.strokeStyle = p.color; 
+            ctx.lineWidth = 3;
+
+            // 動態尾部引擎噴火
+            if (p.isMoving || Math.random() > 0.5) {
+                const flameLen = p.isMoving ? (p.r * (1.2 + Math.random() * 0.4)) : (p.r * 0.5);
+                ctx.save();
+                ctx.shadowColor = '#ffaa00';
+                ctx.strokeStyle = '#ff7700';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-p.r * 0.6, -4);
+                ctx.lineTo(-p.r * 0.6 - flameLen, 0);
+                ctx.lineTo(-p.r * 0.6, 4);
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(255, 150, 0, 0.4)';
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // 戰機主體
+            if (p.id === 1) {
+                ctx.beginPath();
+                ctx.moveTo(p.r * 1.2, 0);              
+                ctx.lineTo(-p.r * 0.2, -p.r * 0.5);    
+                ctx.lineTo(-p.r * 0.1, -p.r * 1.1);    
+                ctx.lineTo(-p.r * 0.8, -p.r * 0.5);    
+                ctx.lineTo(-p.r * 1.1, -p.r * 0.6);    
+                ctx.lineTo(-p.r * 0.6, 0);             
+                ctx.lineTo(-p.r * 1.1, p.r * 0.6);     
+                ctx.lineTo(-p.r * 0.8, p.r * 0.5);     
+                ctx.lineTo(-p.r * 0.1, p.r * 1.1);     
+                ctx.lineTo(-p.r * 0.2, p.r * 0.5);     
+                ctx.closePath();
+                ctx.stroke();
+
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.arc(0, 0, p.r * 0.5, 0, Math.PI * 2); ctx.stroke();
+            } else {
+                ctx.beginPath();
+                ctx.moveTo(p.r * 1.4, 0);              
+                ctx.lineTo(-p.r * 0.5, -p.r * 0.3);    
+                ctx.lineTo(p.r * 0.1, -p.r * 1.2);     
+                ctx.lineTo(-p.r * 0.9, -p.r * 0.4);    
+                ctx.lineTo(-p.r * 1.3, 0);             
+                ctx.lineTo(-p.r * 0.9, p.r * 0.4);     
+                ctx.lineTo(p.r * 0.1, p.r * 1.2);      
+                ctx.lineTo(-p.r * 0.5, p.r * 0.3);     
+                ctx.closePath();
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff'; ctx.beginPath();
+                ctx.moveTo(p.r * 0.3, 0); ctx.lineTo(-p.r * 0.1, -3); 
+                ctx.lineTo(-p.r * 0.5, 0); ctx.lineTo(-p.r * 0.1, 3);
+                ctx.closePath(); ctx.fill();
+            }
+
+            // 槍口閃光
+            if (p.muzzleFlash > 0) {
+                ctx.save();
+                ctx.fillStyle = '#ffffff'; ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 20;
+                ctx.beginPath(); ctx.arc(p.r * 1.4, 0, p.r * 0.6, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+
+            // 護盾
+            if (p.shield) {
+                ctx.strokeStyle = '#ffffff'; ctx.shadowColor = '#ffffff'; ctx.lineWidth = 2; ctx.shadowBlur = 18;
+                ctx.beginPath(); ctx.arc(0, 0, p.r * 1.6, 0, Math.PI * 2); ctx.stroke();
+                ctx.strokeStyle = p.color; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+                ctx.beginPath(); ctx.arc(0, 0, p.r * 1.4, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); 
+            }
+
+            ctx.restore();
+            ctx.shadowBlur = 0;
+        }
+
+        function draw() {
+            ctx.save();
+            // 畫面受傷震動
+            if (screenShakeLeft > 0) {
+                const dx = (Math.random() * 2 - 1) * screenShakeLeft;
+                const dy = (Math.random() * 2 - 1) * screenShakeLeft;
+                ctx.translate(dx, dy);
+                screenShakeLeft *= 0.9;
+                if (screenShakeLeft < 0.5) screenShakeLeft = 0;
+            }
+
+            ctx.fillStyle = 'rgba(4, 6, 15, 0.32)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = '#0d132d'; ctx.lineWidth = 1;
+            for(let x=0; x<canvas.width; x+=45) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+            for(let y=0; y<canvas.height; y+=45) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+
+            // 🛑 背景：靜態微粒與動態流星
+            bgParticles.forEach(bp => { 
+                if (bp.isShootingStar) {
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                    ctx.lineWidth = bp.size;
+                    ctx.beginPath();
+                    ctx.moveTo(bp.x, bp.y);
+                    ctx.lineTo(bp.x - bp.speedX * 2.5, bp.y - bp.speedY * 2.5);
+                    ctx.stroke();
+                } else {
+                    ctx.fillStyle = '#1c2554';
+                    ctx.fillRect(bp.x, bp.y, bp.size, bp.size); 
+                }
+            });
+
+            // 🛑 高能縮圈紅牆
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 0, 51, 0.14)';
+            ctx.strokeStyle = '#ff0033';
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 25;
+            ctx.shadowColor = '#ff0033';
+            
+            let w = zone.right - zone.left;
+            let h = zone.bottom - zone.top;
+            ctx.strokeRect(zone.left, zone.top, w, h);
+            
+            // 🛑 Border Vortex 數位代碼流動粒子
+            ctx.fillStyle = '#ff0033';
+            ctx.font = 'bold 13px Courier New';
+            let perimeter = 2 * (w + h);
+            
+            vortexParticles.forEach(vp => {
+                let offset = (vp.pos + zoneParticleOffset) % 1.0;
+                let current = offset * perimeter;
+                let px, py;
+                
+                if (current < w) { px = zone.left + current; py = zone.top; }
+                else if (current < w + h) { px = zone.right; py = zone.top + (current - w); }
+                else if (current < 2*w + h) { px = zone.right - (current - w - h); py = zone.bottom; }
+                else { px = zone.left; py = zone.bottom - (current - 2*w - h); }
+                
+                ctx.fillText(vp.char, px - 4, py + 4);
+            });
+            ctx.restore();
+
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 0, 51, 0.14)';
+            ctx.fillRect(0, 0, canvas.width, zone.top); 
+            ctx.fillRect(0, zone.bottom, canvas.width, canvas.height - zone.bottom); 
+            ctx.fillRect(0, zone.top, zone.left, zone.bottom - zone.top); 
+            ctx.fillRect(zone.right, zone.top, canvas.width - zone.right, zone.bottom - zone.top); 
+            ctx.restore();
+
+            const now = Date.now();
+            meteors.forEach(m => {
+                ctx.save();
+                const elapsed = now - m.spawnTime;
+                if (!m.landed) {
+                    ctx.strokeStyle = '#ff3300'; ctx.lineWidth = 2.5; ctx.shadowBlur = 12; ctx.shadowColor = '#ff3300';
+                    ctx.setLineDash([6, 3]); ctx.beginPath(); ctx.arc(m.targetX, m.targetY, m.radius, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+                    const ratio = 1 - (elapsed / m.warnDuration);
+                    ctx.beginPath(); ctx.arc(m.targetX, m.targetY, m.radius * Math.max(0, ratio), 0, Math.PI * 2); ctx.fillStyle = 'rgba(255, 51, 0, 0.18)'; ctx.fill();
+                    ctx.fillStyle = '#ff9900'; ctx.shadowColor = '#ffaa00'; ctx.shadowBlur = 15;
+                    ctx.beginPath(); ctx.arc(m.targetX, m.currentY, 9, 0, Math.PI * 2); ctx.fill();
+                } else {
+                    const expElapsed = elapsed - m.warnDuration;
+                    ctx.globalAlpha = Math.max(0, 1 - expElapsed / 400);
+                    ctx.fillStyle = '#ff2200'; ctx.shadowBlur = 20; ctx.shadowColor = '#ff2200';
+                    ctx.beginPath(); ctx.arc(m.targetX, m.targetY, m.radius, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.restore();
+            });
+
+            if (itemBox) {
+                itemBox.pulse += 0.08;
+                const currentSize = itemBox.size + Math.sin(itemBox.pulse) * 3;
+                const glitchX = Math.random() > 0.92 ? (Math.random() * 4 - 2) : 0;
+                ctx.save();
+                ctx.shadowBlur = 20; ctx.shadowColor = '#ffff00'; ctx.strokeStyle = '#ffff00'; ctx.lineWidth = 2.5;
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.12)';
+                ctx.translate(itemBox.x + glitchX, itemBox.y); ctx.rotate(itemBox.pulse * 0.4);
+                ctx.strokeRect(-currentSize/2, -currentSize/2, currentSize, currentSize);
+                ctx.fillRect(-currentSize/2, -currentSize/2, currentSize, currentSize);
+                ctx.fillStyle = '#ffffff'; ctx.font = 'bold 15px Courier New'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.rotate(-itemBox.pulse * 0.4); ctx.fillText('?', 0, 0);
+                ctx.restore();
+            }
+
+            bullets.forEach(b => {
+                ctx.save();
+                ctx.shadowBlur = b.plasma ? 22 : 12; ctx.shadowColor = b.color;
+                ctx.strokeStyle = b.plasma ? b.color : '#fff'; ctx.lineWidth = b.plasma ? 10 : 4.5; ctx.lineCap = 'round';
+                ctx.beginPath();
+                const speedLen = Math.hypot(b.vx, b.vy);
+                ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - (b.vx/speedLen)*(b.plasma ? 22 : 14), b.y - (b.vy/speedLen)*(b.plasma ? 22 : 14));
+                ctx.stroke();
+                ctx.restore();
+            });
+
+            drawCyberStriker(p1);
+            drawCyberStriker(p2);
+
+            particles.forEach(p => {
+                ctx.save(); ctx.globalAlpha = p.alpha; ctx.fillStyle = p.color;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            });
+            ctx.globalAlpha = 1.0;
+            ctx.restore(); 
+        }
+
+        function checkGameOver() {
+            if (p1.hp <= 0 || p2.hp <= 0) {
+                gameActive = false;
+                overlay.style.display = 'flex';
+                if (p1.hp <= 0 && p2.hp <= 0) {
+                    winnerText.innerText = "CRITICAL_ERR // DRAW";
+                    winnerText.style.color = "#48547a";
+                } else if (p1.hp <= 0) {
+                    winnerText.innerText = "STRIKER_02 WIN";
+                    winnerText.style.color = p2.color;
+                } else {
+                    winnerText.innerText = "STRIKER_01 WIN";
+                    winnerText.style.color = p1.color;
+                }
+            }
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function resetGame() {
+            p1.x = 200; p1.y = 375; p1.hp = 5; p1.dirX = 1; p1.dirY = 0; p1.trail = []; p1.shield = false; p1.lastHurtByZone = 0; p1.muzzleFlash = 0;
+            p1.burstUntil = 0; p1.plasmaUntil = 0; p1.hasteUntil = 0;
+            
+            p2.x = 1100; p2.y = 375; p2.hp = 5; p2.dirX = -1; p2.dirY = 0; p2.trail = []; p2.shield = false; p2.lastHurtByZone = 0; p2.muzzleFlash = 0;
+            p2.burstUntil = 0; p2.plasmaUntil = 0; p2.hasteUntil = 0;
+
+            bullets = []; particles = []; meteors = []; itemBox = null;
+            nextItemTime = Date.now() + 4000;
+            nextMeteorTime = Date.now() + 3000;
+            screenShakeLeft = 0;
+            
+            currentStage = 1;
+            zoneState = "STABLE";
+            stageTimer = Date.now() + 15000; 
+            zone = { left: 0, right: canvas.width, top: 0, bottom: canvas.height };
+            targetZone = { left: 0, right: canvas.width, top: 0, bottom: canvas.height };
+            
+            updateHpBars();
+            overlay.style.display = 'none';
+            gameActive = true;
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
